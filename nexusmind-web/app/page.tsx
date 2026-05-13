@@ -3,30 +3,27 @@
 import { useState } from "react";
 
 export default function Home() {
+  const [input, setInput] = useState("");
   const [messages, setMessages] = useState([
     {
       role: "assistant",
-      content: "👋 مرحباً! أنا NexusMind AI",
+      content: "👋 مرحبًا! أنا NexusMind AI",
     },
   ]);
 
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-
   const sendMessage = async () => {
-    if (!input.trim()) return;
+    if (!input) return;
 
-    const userMessage = {
-      role: "user",
-      content: input,
-    };
+    setMessages((prev: any) => [
+      ...prev,
+      {
+        role: "user",
+        content: input,
+      },
+    ]);
 
-    setMessages((prev: any) => [...prev, userMessage]);
-
-    const currentInput = input;
-
+    const repo = input;
     setInput("");
-    setLoading(true);
 
     try {
       const response = await fetch(
@@ -37,50 +34,44 @@ export default function Home() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            repo_name: currentInput,
+            repo_url: `https://github.com/facebook/${repo}`,
           }),
         }
       );
 
       const data = await response.json();
 
-      const botMessage = {
-        role: "assistant",
-        content: JSON.stringify(data, null, 2),
-      };
-
-      setMessages((prev: any) => [...prev, botMessage]);
-    } catch (error: any) {
-      console.log(error);
-
       setMessages((prev: any) => [
         ...prev,
         {
           role: "assistant",
-          content:
-            "❌ " + (error?.message || "خطأ غير معروف"),
+          content: JSON.stringify(data, null, 2),
+        },
+      ]);
+    } catch (error) {
+      setMessages((prev: any) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "❌ Failed to fetch",
         },
       ]);
     }
-
-    setLoading(false);
   };
 
   return (
-    <main className="bg-black text-white min-h-screen flex flex-col">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-800">
+    <main className="min-h-screen bg-black text-white flex flex-col">
+      <div className="p-4 border-b border-zinc-800">
         <h1 className="text-2xl font-bold">
           NexusMind AI 🚀
         </h1>
       </div>
 
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((msg: any, index) => (
+        {messages.map((msg: any, index: number) => (
           <div
             key={index}
-            className={`max-w-[85%] p-4 rounded-3xl whitespace-pre-wrap ${
+            className={`max-w-[85%] rounded-3xl p-4 whitespace-pre-wrap ${
               msg.role === "user"
                 ? "bg-blue-600 ml-auto"
                 : "bg-zinc-900"
@@ -89,16 +80,9 @@ export default function Home() {
             {msg.content}
           </div>
         ))}
-
-        {loading && (
-          <div className="bg-zinc-900 p-4 rounded-3xl w-fit">
-            ⏳ جاري التحليل...
-          </div>
-        )}
       </div>
 
-      {/* Input */}
-      <div className="p-4 border-t border-gray-800 flex gap-2">
+      <div className="p-4 border-t border-zinc-800 flex gap-2">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}

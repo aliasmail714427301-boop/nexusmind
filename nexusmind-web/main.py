@@ -1,9 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+import subprocess
+import os
 
 app = FastAPI()
 
-# تفعيل CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -12,33 +14,36 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+class RepoRequest(BaseModel):
+    repo_url: str
+
 @app.get("/")
-def home():
-    return {"message": "NexusMind API Running 🚀"}
+def root():
+    return {"message": "NexusMind API Running"}
 
 @app.post("/repos")
-def clone_repo(data: dict):
-    repo_url = data.get("repo_url")
+def clone_repo(data: RepoRequest):
+    repo_name = data.repo_url.split("/")[-1]
 
-    if not repo_url:
-        return {"error": "repo_url required"}
+    if os.path.exists(repo_name):
+        return {
+            "status": "already_exists",
+            "repo": repo_name
+        }
 
-    return {
-        "success": True,
-        "repo": repo_url,
-        "message": "Repository received successfully ✅"
-    }
+    try:
+        subprocess.run(
+            ["git", "clone", data.repo_url],
+            check=True
+        )
 
-@app.get("/repos/{repo_name}/files")
-def list_files(repo_name: str):
-    return {
-        "repo": repo_name,
-        "files": ["README.md", "package.json", "src/index.js"]
-    }
+        return {
+            "status": "success",
+            "repo": repo_name
+        }
 
-@app.get("/repos/{repo_name}/analyze")
-def analyze_repo(repo_name: str):
-    return {
-        "repo": repo_name,
-        "analysis": "This repository uses React and modern frontend structure."
-    }
+    except Exception as e:
+        return {
+            "status": "error",
+            "detail": str(e)
+        }
